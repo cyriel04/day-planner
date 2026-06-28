@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day planner</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --border: #e8e6e0;
+    --text: #1a1a18;
+    --muted: #888680;
+    --faint: #c8c6c0;
+    --tag-grind-bg: #e8f0fb; --tag-grind-fg: #1a4fa0;
+    --tag-learn-bg: #eeedfb; --tag-learn-fg: #3c3489;
+    --tag-body-bg: #eaf3de; --tag-body-fg: #2d5c0e;
+    --tag-chill-bg: #faeeda; --tag-chill-fg: #7a4a08;
+    --tag-rest-bg: #f1efea; --tag-rest-fg: #666460;
+    --accent: #3a6bd4;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141412;
+      --surface: #1e1e1b;
+      --border: #2e2e2a;
+      --text: #e8e6e0;
+      --muted: #666460;
+      --faint: #3a3a36;
+      --tag-grind-bg: #0c2050; --tag-grind-fg: #7aaaf0;
+      --tag-learn-bg: #1a1640; --tag-learn-fg: #a09ae8;
+      --tag-body-bg: #0e2008; --tag-body-fg: #7ec440;
+      --tag-chill-bg: #2a1a04; --tag-chill-fg: #d4a040;
+      --tag-rest-bg: #1e1e1a; --tag-rest-fg: #888680;
+      --accent: #6899e8;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  .page { max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+  header { margin-bottom: 1.75rem; }
+  .header-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  h1 { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .header-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .seg-row { display: flex; gap: 6px; margin-bottom: 1.25rem; }
+  .seg-btn {
+    flex: 1; padding: 9px 0; border-radius: var(--radius);
+    border: 1px solid var(--border); font-size: 13px; font-weight: 500;
+    cursor: pointer; background: var(--surface); color: var(--muted);
+    transition: all 0.15s; text-align: center;
+  }
+  .seg-btn.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .mode-note { font-size: 12px; color: var(--muted); margin-bottom: 1rem; padding: 8px 12px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); }
+
+  .block-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; overflow: hidden; }
+  .block-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .block-emoji { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+  .block-main { flex: 1; min-width: 0; }
+  .block-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .block-meta { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .block-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .block-tag { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; }
+  .tag-grind { background: var(--tag-grind-bg); color: var(--tag-grind-fg); }
+  .tag-learn { background: var(--tag-learn-bg); color: var(--tag-learn-fg); }
+  .tag-body { background: var(--tag-body-bg); color: var(--tag-body-fg); }
+  .tag-chill { background: var(--tag-chill-bg); color: var(--tag-chill-fg); }
+  .tag-rest { background: var(--tag-rest-bg); color: var(--tag-rest-fg); }
+  .chevron { font-size: 13px; color: var(--faint); transition: transform 0.2s; display: inline-block; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .block-body { display: none; border-top: 1px solid var(--border); padding: 14px; flex-direction: column; gap: 10px; }
+  .block-body.open { display: flex; }
+
+  .block-desc { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+  .tip { display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); }
+  .tip-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .tip-text { font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+  .refs-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); margin-bottom: 2px; }
+  .refs-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ref-chip { font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); background: var(--bg); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+  .ref-chip:active { opacity: 0.7; }
+  .ref-chip svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  footer { margin-top: 2.5rem; text-align: center; font-size: 11px; color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="header-eyebrow">while between gigs</div>
+    <h1>Day planner</h1>
+    <div class="header-sub">No alarms. No guilt. Just a rough order of operations.</div>
+  </header>
+
+  <div class="seg-row" id="segs"></div>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:#3a6bd4"></div> grind</div>
+    <div class="leg"><div class="leg-dot" style="background:#7f77dd"></div> learn</div>
+    <div class="leg"><div class="leg-dot" style="background:#639922"></div> body</div>
+    <div class="leg"><div class="leg-dot" style="background:#c08010"></div> chill</div>
+    <div class="leg"><div class="leg-dot" style="background:#999794"></div> rest</div>
+  </div>
+
+  <div class="mode-note" id="mode-note"></div>
+  <div id="blocks"></div>
+
+  <footer>tap any block to expand &nbsp;·&nbsp; save this page to your home screen to use offline</footer>
+</div>
+
+<script>
+const DAYS = {
+  weekday: {
+    label: "Weekday",
+    note: "No alarm, no clock. Just a rough order of operations. Get the grind block done early and the rest of the day is yours.",
+    blocks: [
+      {
+        emoji: "☀️", title: "Morning reset", tag: "body", tagLabel: "body",
+        meta: "Wake up whenever — shoot for before 9",
+        desc: "Short stretch or walk. Even just 10 min outside makes a difference. Meditate before touching your phone — apps like Insight Timer have free guided sessions. Give yourself at least 20 min before screens.",
+        tips: ["No alarm anxiety. Your only real rule is don't sleep past noon.", "Meditation first, doom scroll never first."],
+        refs: []
+      },
+      {
+        emoji: "💼", title: "Job hunt block", tag: "grind", tagLabel: "grind",
+        meta: "30 min max — quality over quantity",
+        desc: "One focused session per day. Tailored CV, one solid cover letter, or 2–3 targeted LinkedIn reaches. Don't spray-apply — it's demoralizing and rarely works. Track what you've sent in a simple Notion table.",
+        tips: ["Cap it at 30 min then stop. More time = more anxiety, not more results.", "Not hearing back? Tweak the CV, not the volume."],
+        refs: [
+          { label: "LinkedIn Easy Apply tips", url: "https://www.linkedin.com/help/linkedin/answer/75815" },
+          { label: "Notion job tracker template", url: "https://www.notion.so/templates/job-search-tracker" }
+        ]
+      },
+      {
+        emoji: "🤖", title: "Udemy — AI learning", tag: "learn", tagLabel: "learn",
+        meta: "1 to 1.5 hrs — treat it like a real class",
+        desc: "Your actual skill investment. Follow the roadmap below in order — each concept builds on the last. Don't jump around.",
+        tips: [
+          "Week 1–2: Prompt engineering basics — rules, constraints, output formatting, system prompts.",
+          "Week 3–4: AI policy and safety — how models are instructed, alignment basics, guardrails.",
+          "Week 5–6: Agentic loop — what an agent is, tool use, function calling, the ReAct pattern.",
+          "Week 7–8: Build something real — a simple Next.js + Vercel AI SDK agent with one tool.",
+          "Use Cursor and Claude to build your agent. You already use both daily — lean into it."
+        ],
+        refs: [
+          { label: "Vercel AI SDK docs", url: "https://sdk.vercel.ai/docs" },
+          { label: "Anthropic cookbook (agents)", url: "https://github.com/anthropics/anthropic-cookbook" },
+          { label: "Prompt engineering guide", url: "https://www.promptingguide.ai" },
+          { label: "LangChain agent concepts", url: "https://python.langchain.com/docs/concepts/agents/" },
+          { label: "OpenAI function calling", url: "https://platform.openai.com/docs/guides/function-calling" }
+        ]
+      },
+      {
+        emoji: "☕", title: "Break", tag: "rest", tagLabel: "rest",
+        meta: "Short mental reset — don't skip this",
+        desc: "Step away from the screen. Eat, walk around the room, do nothing. Don't let this turn into a 2-hour scroll session.",
+        tips: ["Set a loose 20-min mental timer — not a hard alarm, just a nudge.", "Coffee or snack, then back at it."],
+        refs: []
+      },
+      {
+        emoji: "💻", title: "Udemy part 2 or portfolio", tag: "learn", tagLabel: "learn",
+        meta: "Continue lessons or build something small",
+        desc: "Either continue the Udemy course or work on a portfolio project. A simple AI-powered app — even a to-do list with a Claude-powered summary feature — is more impressive than any certificate.",
+        tips: ["Tired of Udemy? Switch to building. Learning by doing beats passive watching.", "Push everything to GitHub. Recruiters actually check."],
+        refs: [
+          { label: "Next.js docs", url: "https://nextjs.org/docs" },
+          { label: "Shadcn UI", url: "https://ui.shadcn.com" },
+          { label: "Refine framework", url: "https://refine.dev/docs" }
+        ]
+      },
+      {
+        emoji: "🏋️", title: "Gym", tag: "body", tagLabel: "body",
+        meta: "Whenever your energy is right — afternoon is ideal",
+        desc: "Non-negotiable. Being laid off wrecks mental health if you let it. The gym is the single best thing you can do for your headspace. Go even when you don't feel like it — especially then.",
+        tips: ["Gym during the day = no crowd. Take the win.", "Even 30 min counts. Don't skip for time reasons."],
+        refs: []
+      },
+      {
+        emoji: "📖", title: "Read", tag: "chill", tagLabel: "chill",
+        meta: "Low effort, high return — any time of day",
+        desc: "Anything goes — fiction, non-fiction, whatever. If it's technical, great. If not, fine. The goal is to give your brain a different kind of input.",
+        tips: ["Physical book > phone. Less eye strain, fewer notifications.", "30 pages a day and you'll finish a book every 2 weeks."],
+        refs: []
+      },
+      {
+        emoji: "🎮", title: "PS5 time", tag: "chill", tagLabel: "chill",
+        meta: "Scheduled, not guilty",
+        desc: "You're allowed to enjoy this. The key is it's planned — not something you fall into because you're avoiding something else. Play, finish the session, move on.",
+        tips: ["Decide a loose end time before you start. Easier to stop when you already committed.", "You did the work earlier. This is the reward."],
+        refs: []
+      },
+      {
+        emoji: "📺", title: "Netflix / chill", tag: "chill", tagLabel: "chill",
+        meta: "Evening wind-down",
+        desc: "Watch something you enjoy. This is the reward for doing the things earlier. Don't pair it with job hunting or studying.",
+        tips: ["Pair it with dinner so screens-off still happens at a decent time."],
+        refs: []
+      },
+      {
+        emoji: "📱", title: "Doom scroll allowance", tag: "chill", tagLabel: "chill",
+        meta: "Max 30 min — scheduled, not random",
+        desc: "You get one guilt-free scroll session a day. Having it here in the plan keeps it from happening randomly and killing your momentum.",
+        tips: ["Random scrolling that bleeds past 30 min is where the whole day disappears.", "Try grayscale mode on your phone during this block — kills a lot of the dopamine hook."],
+        refs: []
+      },
+      {
+        emoji: "🌙", title: "Wind down + sleep", tag: "rest", tagLabel: "rest",
+        meta: "No hard bedtime — just no screens 30 min before",
+        desc: "Read, stretch, or just lie there. Your body will find the right sleep time after a week or two. No alarm means you sleep what you actually need.",
+        tips: ["No phone in bed. Book or nothing.", "A consistent wind-down routine matters more than a fixed sleep time."],
+        refs: []
+      }
+    ]
+  },
+  weekend: {
+    label: "Weekend",
+    note: "Full recharge mode. No job apps, no pressure, no guilt. You grinded Mon–Fri.",
+    blocks: [
+      {
+        emoji: "☀️", title: "Slow morning", tag: "rest", tagLabel: "rest",
+        meta: "Sleep in, no agenda",
+        desc: "Weekend mornings are yours. Sleep until you're done sleeping. Lazy breakfast, coffee, maybe a short walk if you feel like it. No job apps — firm rule.",
+        tips: ["The 'no job apps on weekends' rule protects your mental health more than you think."],
+        refs: []
+      },
+      {
+        emoji: "🤖", title: "AI deep dive (optional)", tag: "learn", tagLabel: "learn",
+        meta: "Only if you're genuinely into it — never forced",
+        desc: "If something from the week sparked curiosity, go deep on it today. Build a small experiment, watch a talk, or just explore. This is bonus, not mandatory.",
+        tips: ["Watch a YouTube talk on agents or LLMs — more inspiring than docs on weekends.", "Building something small beats passive consumption every time."],
+        refs: [
+          { label: "AI Jason YouTube", url: "https://www.youtube.com/@AIJasonZ" },
+          { label: "Fireship", url: "https://www.youtube.com/@Fireship" },
+          { label: "Anthropic YouTube", url: "https://www.youtube.com/@anthropic-ai" }
+        ]
+      },
+      {
+        emoji: "🎮", title: "PS5 marathon", tag: "chill", tagLabel: "chill",
+        meta: "Zero guilt — this is the plan",
+        desc: "Weekend is for longer sessions. No time limit pressure. Pick up where you left off.",
+        tips: ["You earned it. Enjoy it fully."],
+        refs: []
+      },
+      {
+        emoji: "🚶", title: "Get outside", tag: "body", tagLabel: "body",
+        meta: "Walk, gym, or anything that moves your body",
+        desc: "Doesn't have to be the gym. Even a walk to a coffee shop counts. Just get out of the house at some point — being inside all day on weekends is a real mood killer.",
+        tips: ["Mall, coffee shop, park — doesn't matter. Just out."],
+        refs: []
+      },
+      {
+        emoji: "📖", title: "Read or fully chill", tag: "chill", tagLabel: "chill",
+        meta: "Whatever recharges you most",
+        desc: "Read, nap, watch a movie, do nothing. Weekends are for topping up your mental battery for the week ahead.",
+        tips: ["If the week was rough, full rest is productive. Don't feel bad about it."],
+        refs: []
+      }
+    ]
+  }
+};
+
+const segsEl = document.getElementById("segs");
+const blocksEl = document.getElementById("blocks");
+const noteEl = document.getElementById("mode-note");
+let active = "weekday";
+
+function renderBlocks(key) {
+  const data = DAYS[key];
+  blocksEl.innerHTML = "";
+  noteEl.textContent = data.note;
+
+  data.blocks.forEach(b => {
+    const card = document.createElement("div");
+    card.className = "block-card";
+
+    const header = document.createElement("div");
+    header.className = "block-header";
+    header.setAttribute("role", "button");
+    header.setAttribute("aria-expanded", "false");
+    header.innerHTML = `
+      <span class="block-emoji" aria-hidden="true">${b.emoji}</span>
+      <div class="block-main">
+        <div class="block-title">${b.title}</div>
+        <div class="block-meta">${b.meta}</div>
+      </div>
+      <div class="block-right">
+        <span class="block-tag tag-${b.tag}">${b.tagLabel}</span>
+        <span class="chevron">▾</span>
+      </div>
+    `;
+
+    const body = document.createElement("div");
+    body.className = "block-body";
+
+    const desc = document.createElement("p");
+    desc.className = "block-desc";
+    desc.textContent = b.desc;
+    body.appendChild(desc);
+
+    (b.tips || []).forEach(t => {
+      const tip = document.createElement("div");
+      tip.className = "tip";
+      tip.innerHTML = `<span class="tip-icon">💡</span><span class="tip-text">${t}</span>`;
+      body.appendChild(tip);
+    });
+
+    if (b.refs && b.refs.length) {
+      const label = document.createElement("div");
+      label.className = "refs-label";
+      label.textContent = "References";
+      body.appendChild(label);
+
+      const wrap = document.createElement("div");
+      wrap.className = "refs-wrap";
+      b.refs.forEach(r => {
+        const a = document.createElement("a");
+        a.className = "ref-chip";
+        a.href = r.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10L10 2M5 2h5v5"/></svg>${r.label}`;
+        wrap.appendChild(a);
+      });
+      body.appendChild(wrap);
+    }
+
+    header.addEventListener("click", () => {
+      const isOpen = body.classList.contains("open");
+      body.classList.toggle("open", !isOpen);
+      header.querySelector(".chevron").classList.toggle("open", !isOpen);
+      header.setAttribute("aria-expanded", String(!isOpen));
+    });
+
+    card.appendChild(header);
+    card.appendChild(body);
+    blocksEl.appendChild(card);
+  });
+}
+
+["weekday", "weekend"].forEach(k => {
+  const btn = document.createElement("button");
+  btn.className = "seg-btn" + (k === active ? " on" : "");
+  btn.textContent = DAYS[k].label;
+  btn.addEventListener("click", () => {
+    active = k;
+    document.querySelectorAll(".seg-btn").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    renderBlocks(k);
+  });
+  segsEl.appendChild(btn);
+});
+
+renderBlocks(active);
+</script>
+</body>
+</html>
